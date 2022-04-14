@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Actualizacion Cartera clientes</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <script src="https://unpkg.com/http-vue-loader"></script>
+    <script src="https://unpkg.com/axios@0.2.1/dist/axios.min.js"></script>
+  </head>
+  <body>
+    <nav>
+        <label for="" >
+          <a href=""><img src="/IMG/logo.png" alt="" class="logoStarken"></a>
+        </label>
+    </nav>
+    <div id="app">
+      <h1>Actualizacion Cartera de Clientes</h1>
+  
+      <div v-if="!image">
+        <h2>Seleccionar Archivo</h2>
+        <input type="file" @change="onFileChange">
+      </div>
+      <div v-else>
+        <img src="/IMG/logoexcel.PNG" />
+        <button v-if="!uploadURL" @click="removeImage">Remover Excel</button>
+        <button v-if="!uploadURL" @click="uploadImage">Cargar Excel</button>
+      </div>
+      <h2 v-if="uploadURL">Archivo Excel subio con exito!</h2>
+    </div>
+    <div>
+        <h2 class="tituloDescarga">Descargar Documento Estandar</h2>
+      
+        <a href="https://upload-ctas-ctes.s3.amazonaws.com/Cta+Cte+Doc+Tipo.xlsx" class="button" download="">Descargar</a>
+      </div>
+    <script>
+      const MAX_IMAGE_SIZE = 1000000
+
+      /* ENTER YOUR ENDPOINT HERE */
+
+      const API_ENDPOINT = 'https://vhwsxmv6a2.execute-api.us-east-1.amazonaws.com/default/getPresignedURLCtaCte' // e.g. https://ab1234ab123.execute-api.us-east-1.amazonaws.com/uploads
+
+      new Vue({
+        el: "#app",
+        data: {
+          image: '',
+          uploadURL: ''
+        },
+        methods: {
+          onFileChange (e) {
+            let files = e.target.files || e.dataTransfer.files
+            if (!files.length) return
+            this.createImage(files[0])
+          },
+          createImage (file) {
+            // var image = new Image()
+            let reader = new FileReader()
+            reader.onload = (e) => {
+              console.log('length: ', e.target.result.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
+              if (!e.target.result.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                return alert('Tipo de archivo Erroneo - Seleccionar solo .xlsx')
+              }
+              if (e.target.result.length > MAX_IMAGE_SIZE) {
+                return alert('El Archivo Excel es muy granda.')
+              }
+              this.image = e.target.result
+            }
+            reader.readAsDataURL(file)
+          },
+          removeImage: function (e) {
+            console.log('Remove clicked')
+            this.image = ''
+          },
+          uploadImage: async function (e) {
+            console.log('Upload clicked')
+            // Get the presigned URL
+            const response = await axios({
+              method: 'GET',
+              url: API_ENDPOINT
+            })
+            console.log('Response: ', response)
+            console.log('Uploading: ', this.image)
+            let binary = atob(this.image.split(',')[1])
+            let array = []
+            for (var i = 0; i < binary.length; i++) {
+              array.push(binary.charCodeAt(i))
+            }
+            let blobData = new Blob([new Uint8Array(array)], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+            console.log('Uploading to: ', response.uploadURL)
+            const result = await fetch(response.uploadURL, {
+              method: 'PUT',
+              body: blobData
+            })
+            console.log('Result: ', result)
+            // Final URL for the user doesn't need the query string params
+            this.uploadURL = response.uploadURL.split('?')[0]
+          }
+        }
+      })
+    </script>
+    <style type="text/css">
+      body {
+    background: #dddfe0;
+    font-family: 'Futura Md BT', sans-serif;
+  }
+  nav {
+    background: #009d4e;
+    padding: 30px;
+    margin: 0px 50px;
+    border-radius: 30px;
+  }
+  #app {
+    background: #dddfe0;
+    border-radius: 30px;
+    padding: 20px;
+    transition: all 0.2s;
+    text-align: center;
+    margin: 5px 50px 50px 50px;
+    border: 3px solid #009d4e
+  }
+  #logo {
+    width: 10px;
+  }
+  h2 {
+    font-weight: bold;
+    margin-bottom: 15px;
+  }
+  h1, h2 {
+    font-family: 'Futura Md BT', sans-serif;
+    font-weight: normal;
+    margin-bottom: 15px;
+    color:#009d4e
+  }
+  a {
+    color: #42b983;
+  }
+  img {
+    width: 30%;
+    margin: auto;
+    display: block;
+    margin-bottom: 10px;
+  }
+  button {
+    font-family: 'Futura Md BT', sans-serif;
+  }
+  footer {
+    font-family: 'Futura Md BT', sans-serif;
+    font-weight: normal;
+    color:#009d4e;
+    margin-top: 10px;
+  }
+  .tituloDescarga {
+    margin-top: 0;
+    text-align: center
+  }
+  .botonDescarga{
+    text-align: center;
+    /* margin-left: 50%; */
+  }
+  .button { 
+    display: flex;
+    padding: 5px 10px;
+    color: white;
+    position: fixed;
+    margin-top: 30px;
+    margin-left: 670px;
+    transform: translate(-50%, -50%);
+    align-items: center;
+    font-family: 'Rubik One', sans-serif;
+    text-decoration: none;
+    font-size: 3vw;
+    transition: all .5s;
+    background-color: #009d4e;
+  }
+    </style>
+  </body>
+</html>
